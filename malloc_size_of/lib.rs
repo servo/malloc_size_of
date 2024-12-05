@@ -345,55 +345,6 @@ impl<T: MallocSizeOf> MallocSizeOf for std::collections::VecDeque<T> {
     }
 }
 
-impl<A: smallvec::Array> MallocShallowSizeOf for smallvec::SmallVec<A> {
-    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        if self.spilled() {
-            unsafe { ops.malloc_size_of(self.as_ptr()) }
-        } else {
-            0
-        }
-    }
-}
-
-impl<A> MallocSizeOf for smallvec::SmallVec<A>
-where
-    A: smallvec::Array,
-    A::Item: MallocSizeOf,
-{
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        let mut n = self.shallow_size_of(ops);
-        for elem in self.iter() {
-            n += elem.size_of(ops);
-        }
-        n
-    }
-}
-
-impl<T> MallocShallowSizeOf for thin_vec::ThinVec<T> {
-    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        if self.capacity() == 0 {
-            // If it's the singleton we might not be a heap pointer.
-            return 0;
-        }
-
-        assert_eq!(
-            std::mem::size_of::<Self>(),
-            std::mem::size_of::<*const ()>()
-        );
-        unsafe { ops.malloc_size_of(*(self as *const Self as *const *const ())) }
-    }
-}
-
-impl<T: MallocSizeOf> MallocSizeOf for thin_vec::ThinVec<T> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        let mut n = self.shallow_size_of(ops);
-        for elem in self.iter() {
-            n += elem.size_of(ops);
-        }
-        n
-    }
-}
-
 macro_rules! malloc_size_of_hash_set {
     ($ty:ty) => {
         impl<T, S> MallocShallowSizeOf for $ty
@@ -518,38 +469,6 @@ impl<T> MallocSizeOf for std::marker::PhantomData<T> {
 //impl<T> !MallocSizeOf for Arc<T> { }
 //impl<T> !MallocShallowSizeOf for Arc<T> { }
 
-impl<T> MallocUnconditionalShallowSizeOf for servo_arc::Arc<T> {
-    fn unconditional_shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        unsafe { ops.malloc_size_of(self.heap_ptr()) }
-    }
-}
-
-impl<T: MallocSizeOf> MallocUnconditionalSizeOf for servo_arc::Arc<T> {
-    fn unconditional_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.unconditional_shallow_size_of(ops) + (**self).size_of(ops)
-    }
-}
-
-impl<T> MallocConditionalShallowSizeOf for servo_arc::Arc<T> {
-    fn conditional_shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        if ops.have_seen_ptr(self.heap_ptr()) {
-            0
-        } else {
-            self.unconditional_shallow_size_of(ops)
-        }
-    }
-}
-
-impl<T: MallocSizeOf> MallocConditionalSizeOf for servo_arc::Arc<T> {
-    fn conditional_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        if ops.have_seen_ptr(self.heap_ptr()) {
-            0
-        } else {
-            self.unconditional_size_of(ops)
-        }
-    }
-}
-
 /// If a mutex is stored directly as a member of a data type that is being measured,
 /// it is the unique owner of its contents and deserves to be measured.
 ///
@@ -562,206 +481,10 @@ impl<T: MallocSizeOf> MallocSizeOf for std::sync::Mutex<T> {
     }
 }
 
-impl MallocSizeOf for smallbitvec::SmallBitVec {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        if let Some(ptr) = self.heap_ptr() {
-            unsafe { ops.malloc_size_of(ptr) }
-        } else {
-            0
-        }
-    }
-}
-
-impl<T: MallocSizeOf, Unit> MallocSizeOf for euclid::Length<T, Unit> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.0.size_of(ops)
-    }
-}
-
-impl<T: MallocSizeOf, Src, Dst> MallocSizeOf for euclid::Scale<T, Src, Dst> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.0.size_of(ops)
-    }
-}
-
-impl<T: MallocSizeOf, U> MallocSizeOf for euclid::Point2D<T, U> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.x.size_of(ops) + self.y.size_of(ops)
-    }
-}
-
-impl<T: MallocSizeOf, U> MallocSizeOf for euclid::Rect<T, U> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.origin.size_of(ops) + self.size.size_of(ops)
-    }
-}
-
-impl<T: MallocSizeOf, U> MallocSizeOf for euclid::SideOffsets2D<T, U> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.top.size_of(ops) +
-            self.right.size_of(ops) +
-            self.bottom.size_of(ops) +
-            self.left.size_of(ops)
-    }
-}
-
-impl<T: MallocSizeOf, U> MallocSizeOf for euclid::Size2D<T, U> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.width.size_of(ops) + self.height.size_of(ops)
-    }
-}
-
-impl<T: MallocSizeOf, Src, Dst> MallocSizeOf for euclid::Transform2D<T, Src, Dst> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.m11.size_of(ops) +
-            self.m12.size_of(ops) +
-            self.m21.size_of(ops) +
-            self.m22.size_of(ops) +
-            self.m31.size_of(ops) +
-            self.m32.size_of(ops)
-    }
-}
-
-impl<T: MallocSizeOf, Src, Dst> MallocSizeOf for euclid::Transform3D<T, Src, Dst> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.m11.size_of(ops) +
-            self.m12.size_of(ops) +
-            self.m13.size_of(ops) +
-            self.m14.size_of(ops) +
-            self.m21.size_of(ops) +
-            self.m22.size_of(ops) +
-            self.m23.size_of(ops) +
-            self.m24.size_of(ops) +
-            self.m31.size_of(ops) +
-            self.m32.size_of(ops) +
-            self.m33.size_of(ops) +
-            self.m34.size_of(ops) +
-            self.m41.size_of(ops) +
-            self.m42.size_of(ops) +
-            self.m43.size_of(ops) +
-            self.m44.size_of(ops)
-    }
-}
-
-impl<T: MallocSizeOf, U> MallocSizeOf for euclid::Vector2D<T, U> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.x.size_of(ops) + self.y.size_of(ops)
-    }
-}
-
-impl MallocSizeOf for selectors::parser::AncestorHashes {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        let selectors::parser::AncestorHashes { ref packed_hashes } = *self;
-        packed_hashes.size_of(ops)
-    }
-}
-
-impl<Impl: selectors::parser::SelectorImpl> MallocUnconditionalSizeOf
-    for selectors::parser::Selector<Impl>
-where
-    Impl::NonTSPseudoClass: MallocSizeOf,
-    Impl::PseudoElement: MallocSizeOf,
-{
-    fn unconditional_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        let mut n = 0;
-
-        // It's OK to measure this ThinArc directly because it's the
-        // "primary" reference. (The secondary references are on the
-        // Stylist.)
-        n += unsafe { ops.malloc_size_of(self.thin_arc_heap_ptr()) };
-        for component in self.iter_raw_match_order() {
-            n += component.size_of(ops);
-        }
-
-        n
-    }
-}
-
-impl<Impl: selectors::parser::SelectorImpl> MallocUnconditionalSizeOf
-    for selectors::parser::SelectorList<Impl>
-where
-    Impl::NonTSPseudoClass: MallocSizeOf,
-    Impl::PseudoElement: MallocSizeOf,
-{
-    fn unconditional_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        let mut n = 0;
-
-        // It's OK to measure this ThinArc directly because it's the "primary" reference. (The
-        // secondary references are on the Stylist.)
-        n += unsafe { ops.malloc_size_of(self.thin_arc_heap_ptr()) };
-        if self.len() > 1 {
-            for selector in self.slice().iter() {
-                n += selector.size_of(ops);
-            }
-        }
-        n
-    }
-}
-
-impl<Impl: selectors::parser::SelectorImpl> MallocUnconditionalSizeOf
-    for selectors::parser::Component<Impl>
-where
-    Impl::NonTSPseudoClass: MallocSizeOf,
-    Impl::PseudoElement: MallocSizeOf,
-{
-    fn unconditional_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        use selectors::parser::Component;
-
-        match self {
-            Component::AttributeOther(ref attr_selector) => attr_selector.size_of(ops),
-            Component::Negation(ref components) => components.unconditional_size_of(ops),
-            Component::NonTSPseudoClass(ref pseudo) => (*pseudo).size_of(ops),
-            Component::Slotted(ref selector) | Component::Host(Some(ref selector)) => {
-                selector.unconditional_size_of(ops)
-            },
-            Component::Is(ref list) | Component::Where(ref list) => list.unconditional_size_of(ops),
-            Component::Has(ref relative_selectors) => relative_selectors.size_of(ops),
-            Component::NthOf(ref nth_of_data) => nth_of_data.size_of(ops),
-            Component::PseudoElement(ref pseudo) => (*pseudo).size_of(ops),
-            Component::Combinator(..) |
-            Component::ExplicitAnyNamespace |
-            Component::ExplicitNoNamespace |
-            Component::DefaultNamespace(..) |
-            Component::Namespace(..) |
-            Component::ExplicitUniversalType |
-            Component::LocalName(..) |
-            Component::ID(..) |
-            Component::Part(..) |
-            Component::Class(..) |
-            Component::AttributeInNoNamespaceExists { .. } |
-            Component::AttributeInNoNamespace { .. } |
-            Component::Root |
-            Component::Empty |
-            Component::Scope |
-            Component::ImplicitScope |
-            Component::ParentSelector |
-            Component::Nth(..) |
-            Component::Host(None) |
-            Component::RelativeSelectorAnchor |
-            Component::Invalid(..) => 0,
-        }
-    }
-}
-
-impl<Impl: selectors::parser::SelectorImpl> MallocSizeOf
-    for selectors::attr::AttrSelectorWithOptionalNamespace<Impl>
-{
-    fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
-        0
-    }
-}
-
 impl MallocSizeOf for Void {
     #[inline]
     fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
         void::unreachable(*self)
-    }
-}
-
-#[cfg(feature = "servo")]
-impl<Static: string_cache::StaticAtomSet> MallocSizeOf for string_cache::Atom<Static> {
-    fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
-        0
     }
 }
 
@@ -804,12 +527,6 @@ malloc_size_of_is_0!(std::num::NonZeroU64);
 malloc_size_of_is_0!(Range<u8>, Range<u16>, Range<u32>, Range<u64>, Range<usize>);
 malloc_size_of_is_0!(Range<i8>, Range<i16>, Range<i32>, Range<i64>, Range<isize>);
 malloc_size_of_is_0!(Range<f32>, Range<f64>);
-
-malloc_size_of_is_0!(app_units::Au);
-
-malloc_size_of_is_0!(cssparser::TokenSerializationType, cssparser::SourceLocation, cssparser::SourcePosition);
-
-malloc_size_of_is_0!(selectors::OpaqueElement);
 
 /// Measurable that defers to inner value and used to verify MallocSizeOf implementation in a
 /// struct.
