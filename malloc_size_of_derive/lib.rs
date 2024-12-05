@@ -10,14 +10,11 @@
 
 //! A crate for deriving the MallocSizeOf trait.
 
-extern crate proc_macro2;
-#[macro_use]
-extern crate syn;
-#[macro_use]
-extern crate synstructure;
+use syn::parse_quote;
+use synstructure::quote;
 
 #[cfg(not(test))]
-decl_derive!([MallocSizeOf, attributes(ignore_malloc_size_of, conditional_malloc_size_of)] => malloc_size_of_derive);
+synstructure::decl_derive!([MallocSizeOf, attributes(ignore_malloc_size_of, conditional_malloc_size_of)] => malloc_size_of_derive);
 
 fn malloc_size_of_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     let match_body = s.each(|binding| {
