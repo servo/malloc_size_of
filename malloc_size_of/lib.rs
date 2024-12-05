@@ -46,6 +46,9 @@
 //!   Note: WebRender has a reduced fork of this crate, so that we can avoid
 //!   publishing this crate on crates.io.
 
+// Ignoring this lint allows us to build on older rustc versions
+#![allow(clippy::needless_lifetimes)]
+
 use std::hash::{BuildHasher, Hash};
 use std::mem::size_of;
 use std::ops::Range;
@@ -99,7 +102,7 @@ impl MallocSizeOfOps {
         // larger than the required alignment, but small enough that it is
         // always in the first page of memory and therefore not a legitimate
         // address.
-        return ptr as *const usize as usize <= 256;
+        ptr as *const usize as usize <= 256
     }
 
     /// Call `size_of_op` on `ptr`, first checking that the allocation isn't
@@ -320,7 +323,7 @@ impl<T> MallocShallowSizeOf for std::collections::VecDeque<T> {
         if ops.has_malloc_enclosing_size_of() {
             if let Some(front) = self.front() {
                 // The front element is an interior pointer.
-                unsafe { ops.malloc_enclosing_size_of(&*front) }
+                unsafe { ops.malloc_enclosing_size_of(front) }
             } else {
                 // This assumes that no memory is allocated when the VecDeque is empty.
                 0
