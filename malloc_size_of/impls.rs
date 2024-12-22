@@ -137,10 +137,9 @@ where
 
 impl<T: MallocSizeOf> MallocSizeOf for Option<T> {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        if let Some(val) = self.as_ref() {
-            val.size_of(ops)
-        } else {
-            0
+        match self {
+            Some(val) => val.size_of(ops),
+            None => 0,
         }
     }
 }
