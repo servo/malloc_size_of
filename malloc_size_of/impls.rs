@@ -1,6 +1,13 @@
+use std::borrow::Cow;
+use std::cell::{Cell, RefCell};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::hash::{BuildHasher, Hash};
 use std::mem::size_of;
+use std::num::{NonZeroU64, NonZeroUsize};
 use std::ops::Range;
+use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicUsize};
+use std::sync::Mutex;
+use std::marker::PhantomData;
 use void::Void;
 
 use crate::{MallocShallowSizeOf, MallocSizeOf, MallocSizeOfOps};
@@ -35,11 +42,11 @@ malloc_size_of_is_0!(u8, u16, u32, u64, u128, usize);
 malloc_size_of_is_0!(i8, i16, i32, i64, i128, isize);
 malloc_size_of_is_0!(f32, f64);
 
-malloc_size_of_is_0!(std::sync::atomic::AtomicBool);
-malloc_size_of_is_0!(std::sync::atomic::AtomicIsize);
-malloc_size_of_is_0!(std::sync::atomic::AtomicUsize);
-malloc_size_of_is_0!(std::num::NonZeroUsize);
-malloc_size_of_is_0!(std::num::NonZeroU64);
+malloc_size_of_is_0!(AtomicBool);
+malloc_size_of_is_0!(AtomicIsize);
+malloc_size_of_is_0!(AtomicUsize);
+malloc_size_of_is_0!(NonZeroUsize);
+malloc_size_of_is_0!(NonZeroU64);
 
 malloc_size_of_is_0!(Range<u8>, Range<u16>, Range<u32>, Range<u64>, Range<usize>);
 malloc_size_of_is_0!(Range<i8>, Range<i16>, Range<i32>, Range<i64>, Range<isize>);
@@ -128,26 +135,26 @@ impl<T: MallocSizeOf, E: MallocSizeOf> MallocSizeOf for Result<T, E> {
     }
 }
 
-impl<T: MallocSizeOf + Copy> MallocSizeOf for std::cell::Cell<T> {
+impl<T: MallocSizeOf + Copy> MallocSizeOf for Cell<T> {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
         self.get().size_of(ops)
     }
 }
 
-impl<T: MallocSizeOf> MallocSizeOf for std::cell::RefCell<T> {
+impl<T: MallocSizeOf> MallocSizeOf for RefCell<T> {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
         self.borrow().size_of(ops)
     }
 }
 
-impl<'a, B: ?Sized + ToOwned> MallocSizeOf for std::borrow::Cow<'a, B>
+impl<'a, B: ?Sized + ToOwned> MallocSizeOf for Cow<'a, B>
 where
     B::Owned: MallocSizeOf,
 {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
         match *self {
-            std::borrow::Cow::Borrowed(_) => 0,
-            std::borrow::Cow::Owned(ref b) => b.size_of(ops),
+            Cow::Borrowed(_) => 0,
+            Cow::Owned(ref b) => b.size_of(ops),
         }
     }
 }
@@ -178,7 +185,7 @@ impl<T: MallocSizeOf> MallocSizeOf for Vec<T> {
     }
 }
 
-impl<T> MallocShallowSizeOf for std::collections::VecDeque<T> {
+impl<T> MallocShallowSizeOf for VecDeque<T> {
     fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
         if ops.has_malloc_enclosing_size_of() {
             if let Some(front) = self.front() {
@@ -195,7 +202,7 @@ impl<T> MallocShallowSizeOf for std::collections::VecDeque<T> {
     }
 }
 
-impl<T: MallocSizeOf> MallocSizeOf for std::collections::VecDeque<T> {
+impl<T: MallocSizeOf> MallocSizeOf for VecDeque<T> {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
         let mut n = self.shallow_size_of(ops);
         for elem in self.iter() {
@@ -244,7 +251,7 @@ macro_rules! malloc_size_of_hash_set {
     };
 }
 
-malloc_size_of_hash_set!(std::collections::HashSet<T, S>);
+malloc_size_of_hash_set!(HashSet<T, S>);
 
 macro_rules! malloc_size_of_hash_map {
     ($ty:ty) => {
@@ -254,7 +261,7 @@ macro_rules! malloc_size_of_hash_map {
             S: BuildHasher,
         {
             fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-                // See the implementation for std::collections::HashSet for details.
+                // See the implementation for HashSet for details.
                 if ops.has_malloc_enclosing_size_of() {
                     self.values()
                         .next()
@@ -283,9 +290,9 @@ macro_rules! malloc_size_of_hash_map {
     };
 }
 
-malloc_size_of_hash_map!(std::collections::HashMap<K, V, S>);
+malloc_size_of_hash_map!(HashMap<K, V, S>);
 
-impl<K, V> MallocShallowSizeOf for std::collections::BTreeMap<K, V>
+impl<K, V> MallocShallowSizeOf for BTreeMap<K, V>
 where
     K: Eq + Hash,
 {
@@ -300,7 +307,7 @@ where
     }
 }
 
-impl<K, V> MallocSizeOf for std::collections::BTreeMap<K, V>
+impl<K, V> MallocSizeOf for BTreeMap<K, V>
 where
     K: Eq + Hash + MallocSizeOf,
     V: MallocSizeOf,
@@ -316,7 +323,7 @@ where
 }
 
 // PhantomData is always 0.
-impl<T> MallocSizeOf for std::marker::PhantomData<T> {
+impl<T> MallocSizeOf for PhantomData<T> {
     fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
         0
     }
@@ -335,7 +342,7 @@ impl<T> MallocSizeOf for std::marker::PhantomData<T> {
 /// If a mutex is stored inside of an Arc value as a member of a data type that is being measured,
 /// the Arc will not be automatically measured so there is no risk of overcounting the mutex's
 /// contents.
-impl<T: MallocSizeOf> MallocSizeOf for std::sync::Mutex<T> {
+impl<T: MallocSizeOf> MallocSizeOf for Mutex<T> {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
         (*self.lock().unwrap()).size_of(ops)
     }
