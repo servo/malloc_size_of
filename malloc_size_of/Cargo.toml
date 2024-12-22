@@ -10,5 +10,10 @@ publish = false
 [lib]
 path = "lib.rs"
 
+[features]
+default = ["std", "void"]
+std = []
+void = ["dep:void"]
+
 [dependencies]
-void = "1.0.2"
+void = { version = "1.0.2", optional = true }

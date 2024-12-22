@@ -1,19 +1,38 @@
-use std::borrow::Cow;
-use std::cell::{Cell, RefCell};
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
-use std::hash::{BuildHasher, Hash};
-use std::mem::size_of;
-use std::num::{NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize};
-use std::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
-use std::ops::Range;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::{AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize};
-use std::sync::atomic::{AtomicU16, AtomicU32, AtomicU64, AtomicU8, AtomicUsize};
-use std::sync::Mutex;
-use std::marker::PhantomData;
-use void::Void;
-
 use crate::{MallocShallowSizeOf, MallocSizeOf, MallocSizeOfOps};
+use core::cell::{Cell, RefCell};
+
+use core::hash::Hash;
+use core::marker::PhantomData;
+use core::mem::size_of;
+use core::num::{NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize};
+use core::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
+use core::ops::Range;
+use core::sync::atomic::AtomicBool;
+use core::sync::atomic::{AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize};
+use core::sync::atomic::{AtomicU16, AtomicU32, AtomicU64, AtomicU8, AtomicUsize};
+
+use alloc::borrow::{Cow, ToOwned};
+use alloc::boxed::Box;
+use alloc::collections::{BTreeMap, VecDeque};
+use alloc::string::String;
+use alloc::vec::Vec;
+
+#[cfg(feature = "std")]
+use std::{
+    collections::{HashMap, HashSet},
+    hash::BuildHasher,
+    sync::Mutex,
+};
+
+// Our one exception to being completely dependency-free. The void crate is tiny, unlikely to ever
+// do another release, and likely to go away if/when the never type stabilises.
+#[cfg(feature = "void")]
+impl MallocSizeOf for void::Void {
+    #[inline]
+    fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
+        void::unreachable(*self)
+    }
+}
 
 /// For use on types where size_of() returns 0.
 #[macro_export]
@@ -230,6 +249,7 @@ impl<T: MallocSizeOf> MallocSizeOf for VecDeque<T> {
     }
 }
 
+#[cfg(feature = "std")]
 macro_rules! malloc_size_of_hash_set {
     ($ty:ty) => {
         impl<T, S> MallocShallowSizeOf for $ty
@@ -269,8 +289,10 @@ macro_rules! malloc_size_of_hash_set {
     };
 }
 
+#[cfg(feature = "std")]
 malloc_size_of_hash_set!(HashSet<T, S>);
 
+#[cfg(feature = "std")]
 macro_rules! malloc_size_of_hash_map {
     ($ty:ty) => {
         impl<K, V, S> MallocShallowSizeOf for $ty
@@ -308,6 +330,7 @@ macro_rules! malloc_size_of_hash_map {
     };
 }
 
+#[cfg(feature = "std")]
 malloc_size_of_hash_map!(HashMap<K, V, S>);
 
 impl<K, V> MallocShallowSizeOf for BTreeMap<K, V>
@@ -360,15 +383,9 @@ impl<T> MallocSizeOf for PhantomData<T> {
 /// If a mutex is stored inside of an Arc value as a member of a data type that is being measured,
 /// the Arc will not be automatically measured so there is no risk of overcounting the mutex's
 /// contents.
+#[cfg(feature = "std")]
 impl<T: MallocSizeOf> MallocSizeOf for Mutex<T> {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
         (*self.lock().unwrap()).size_of(ops)
-    }
-}
-
-impl MallocSizeOf for Void {
-    #[inline]
-    fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
-        void::unreachable(*self)
     }
 }

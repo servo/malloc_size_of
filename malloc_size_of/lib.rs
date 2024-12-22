@@ -45,14 +45,17 @@
 //!
 //!   Note: WebRender has a reduced fork of this crate, so that we can avoid
 //!   publishing this crate on crates.io.
-
+#![cfg_attr(not(feature = "std"), no_std)]
 // Ignoring this lint allows us to build on older rustc versions
 #![allow(clippy::needless_lifetimes)]
 
+extern crate alloc;
+
 mod impls;
 
-use std::ops::{Deref, DerefMut};
-use std::os::raw::c_void;
+use alloc::boxed::Box;
+use core::ffi::c_void;
+use core::ops::{Deref, DerefMut};
 
 /// Trait for measuring the "deep" heap usage of a data structure. This is the
 /// most commonly-used of the traits.
