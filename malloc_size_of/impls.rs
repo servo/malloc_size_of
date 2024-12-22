@@ -59,6 +59,7 @@ macro_rules! malloc_size_of_is_0(
     );
 );
 
+malloc_size_of_is_0!(());
 malloc_size_of_is_0!(bool, char, str);
 malloc_size_of_is_0!(u8, u16, u32, u64, u128, usize);
 malloc_size_of_is_0!(i8, i16, i32, i64, i128, isize);
@@ -100,12 +101,6 @@ impl<'a, T: ?Sized> MallocSizeOf for &'a mut T {
 
 // PhantomData is always 0.
 impl<T> MallocSizeOf for PhantomData<T> {
-    fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
-        0
-    }
-}
-
-impl MallocSizeOf for () {
     fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
         0
     }
