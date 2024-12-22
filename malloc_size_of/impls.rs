@@ -65,9 +65,11 @@ malloc_size_of_is_0!(
     NonZeroI128
 );
 
-malloc_size_of_is_0!(Range<u8>, Range<u16>, Range<u32>, Range<u64>, Range<usize>);
-malloc_size_of_is_0!(Range<i8>, Range<i16>, Range<i32>, Range<i64>, Range<isize>);
-malloc_size_of_is_0!(Range<f32>, Range<f64>);
+impl<T: MallocSizeOf> MallocSizeOf for Range<T> {
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        self.start.size_of(ops) + self.end.size_of(ops)
+    }
+}
 
 impl MallocSizeOf for String {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
