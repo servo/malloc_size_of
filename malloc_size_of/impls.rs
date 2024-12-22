@@ -5,7 +5,9 @@ use std::hash::{BuildHasher, Hash};
 use std::mem::size_of;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::ops::Range;
-use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicUsize};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize};
+use std::sync::atomic::{AtomicU16, AtomicU32, AtomicU64, AtomicU8, AtomicUsize};
 use std::sync::Mutex;
 use std::marker::PhantomData;
 use void::Void;
@@ -43,8 +45,8 @@ malloc_size_of_is_0!(i8, i16, i32, i64, i128, isize);
 malloc_size_of_is_0!(f32, f64);
 
 malloc_size_of_is_0!(AtomicBool);
-malloc_size_of_is_0!(AtomicIsize);
-malloc_size_of_is_0!(AtomicUsize);
+malloc_size_of_is_0!(AtomicU8, AtomicU16, AtomicU32, AtomicU64, AtomicUsize);
+malloc_size_of_is_0!(AtomicI8, AtomicI16, AtomicI32, AtomicI64, AtomicIsize);
 malloc_size_of_is_0!(NonZeroUsize);
 malloc_size_of_is_0!(NonZeroU64);
 
