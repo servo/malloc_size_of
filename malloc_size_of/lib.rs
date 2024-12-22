@@ -54,6 +54,54 @@ mod impls;
 use std::ops::{Deref, DerefMut};
 use std::os::raw::c_void;
 
+/// Trait for measuring the "deep" heap usage of a data structure. This is the
+/// most commonly-used of the traits.
+pub trait MallocSizeOf {
+    /// Measure the heap usage of all descendant heap-allocated structures, but
+    /// not the space taken up by the value itself.
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
+}
+
+/// Trait for measuring the "shallow" heap usage of a container.
+pub trait MallocShallowSizeOf {
+    /// Measure the heap usage of immediate heap-allocated descendant
+    /// structures, but not the space taken up by the value itself. Anything
+    /// beyond the immediate descendants must be measured separately, using
+    /// iteration.
+    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
+}
+
+/// Like `MallocSizeOf`, but with a different name so it cannot be used
+/// accidentally with derive(MallocSizeOf). For use with types like `Rc` and
+/// `Arc` when appropriate (e.g. when measuring a "primary" reference).
+pub trait MallocUnconditionalSizeOf {
+    /// Measure the heap usage of all heap-allocated descendant structures, but
+    /// not the space taken up by the value itself.
+    fn unconditional_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
+}
+
+/// `MallocUnconditionalSizeOf` combined with `MallocShallowSizeOf`.
+pub trait MallocUnconditionalShallowSizeOf {
+    /// `unconditional_size_of` combined with `shallow_size_of`.
+    fn unconditional_shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
+}
+
+/// Like `MallocSizeOf`, but only measures if the value hasn't already been
+/// measured. For use with types like `Rc` and `Arc` when appropriate (e.g.
+/// when there is no "primary" reference).
+pub trait MallocConditionalSizeOf {
+    /// Measure the heap usage of all heap-allocated descendant structures, but
+    /// not the space taken up by the value itself, and only if that heap usage
+    /// hasn't already been measured.
+    fn conditional_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
+}
+
+/// `MallocConditionalSizeOf` combined with `MallocShallowSizeOf`.
+pub trait MallocConditionalShallowSizeOf {
+    /// `conditional_size_of` combined with `shallow_size_of`.
+    fn conditional_shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
+}
+
 /// A C function that takes a pointer to a heap allocation and returns its size.
 type VoidPtrToSizeFn = unsafe extern "C" fn(ptr: *const c_void) -> usize;
 
@@ -133,54 +181,6 @@ impl MallocSizeOfOps {
             .expect("missing have_seen_ptr_op");
         have_seen_ptr_op(ptr as *const c_void)
     }
-}
-
-/// Trait for measuring the "deep" heap usage of a data structure. This is the
-/// most commonly-used of the traits.
-pub trait MallocSizeOf {
-    /// Measure the heap usage of all descendant heap-allocated structures, but
-    /// not the space taken up by the value itself.
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
-}
-
-/// Trait for measuring the "shallow" heap usage of a container.
-pub trait MallocShallowSizeOf {
-    /// Measure the heap usage of immediate heap-allocated descendant
-    /// structures, but not the space taken up by the value itself. Anything
-    /// beyond the immediate descendants must be measured separately, using
-    /// iteration.
-    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
-}
-
-/// Like `MallocSizeOf`, but with a different name so it cannot be used
-/// accidentally with derive(MallocSizeOf). For use with types like `Rc` and
-/// `Arc` when appropriate (e.g. when measuring a "primary" reference).
-pub trait MallocUnconditionalSizeOf {
-    /// Measure the heap usage of all heap-allocated descendant structures, but
-    /// not the space taken up by the value itself.
-    fn unconditional_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
-}
-
-/// `MallocUnconditionalSizeOf` combined with `MallocShallowSizeOf`.
-pub trait MallocUnconditionalShallowSizeOf {
-    /// `unconditional_size_of` combined with `shallow_size_of`.
-    fn unconditional_shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
-}
-
-/// Like `MallocSizeOf`, but only measures if the value hasn't already been
-/// measured. For use with types like `Rc` and `Arc` when appropriate (e.g.
-/// when there is no "primary" reference).
-pub trait MallocConditionalSizeOf {
-    /// Measure the heap usage of all heap-allocated descendant structures, but
-    /// not the space taken up by the value itself, and only if that heap usage
-    /// hasn't already been measured.
-    fn conditional_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
-}
-
-/// `MallocConditionalSizeOf` combined with `MallocShallowSizeOf`.
-pub trait MallocConditionalShallowSizeOf {
-    /// `conditional_size_of` combined with `shallow_size_of`.
-    fn conditional_shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize;
 }
 
 /// Measurable that defers to inner value and used to verify MallocSizeOf implementation in a
