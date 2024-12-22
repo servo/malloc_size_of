@@ -3,7 +3,8 @@ use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::hash::{BuildHasher, Hash};
 use std::mem::size_of;
-use std::num::{NonZeroU64, NonZeroUsize};
+use std::num::{NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize};
+use std::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
 use std::ops::Range;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::{AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize};
@@ -47,8 +48,22 @@ malloc_size_of_is_0!(f32, f64);
 malloc_size_of_is_0!(AtomicBool);
 malloc_size_of_is_0!(AtomicU8, AtomicU16, AtomicU32, AtomicU64, AtomicUsize);
 malloc_size_of_is_0!(AtomicI8, AtomicI16, AtomicI32, AtomicI64, AtomicIsize);
-malloc_size_of_is_0!(NonZeroUsize);
-malloc_size_of_is_0!(NonZeroU64);
+malloc_size_of_is_0!(
+    NonZeroU8,
+    NonZeroU16,
+    NonZeroU32,
+    NonZeroU64,
+    NonZeroUsize,
+    NonZeroU128
+);
+malloc_size_of_is_0!(
+    NonZeroI8,
+    NonZeroI16,
+    NonZeroI32,
+    NonZeroI64,
+    NonZeroIsize,
+    NonZeroI128
+);
 
 malloc_size_of_is_0!(Range<u8>, Range<u16>, Range<u32>, Range<u64>, Range<usize>);
 malloc_size_of_is_0!(Range<i8>, Range<i16>, Range<i32>, Range<i64>, Range<isize>);
