@@ -84,18 +84,6 @@ malloc_size_of_is_0!(
     NonZeroI128
 );
 
-impl<T: MallocSizeOf> MallocSizeOf for Range<T> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.start.size_of(ops) + self.end.size_of(ops)
-    }
-}
-
-impl MallocSizeOf for String {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        unsafe { ops.malloc_size_of(self.as_ptr()) }
-    }
-}
-
 impl<'a, T: ?Sized> MallocSizeOf for &'a T {
     fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
         // Zero makes sense for a non-owning reference.
@@ -110,15 +98,10 @@ impl<'a, T: ?Sized> MallocSizeOf for &'a mut T {
     }
 }
 
-impl<T: ?Sized> MallocShallowSizeOf for Box<T> {
-    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        unsafe { ops.malloc_size_of(&**self) }
-    }
-}
-
-impl<T: MallocSizeOf + ?Sized> MallocSizeOf for Box<T> {
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.shallow_size_of(ops) + (**self).size_of(ops)
+// PhantomData is always 0.
+impl<T> MallocSizeOf for PhantomData<T> {
+    fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
+        0
     }
 }
 
@@ -158,6 +141,22 @@ where
 {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
         self.0.size_of(ops) + self.1.size_of(ops) + self.2.size_of(ops) + self.3.size_of(ops)
+    }
+}
+
+impl<T: MallocSizeOf> MallocSizeOf for [T] {
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        let mut n = 0;
+        for elem in self.iter() {
+            n += elem.size_of(ops);
+        }
+        n
+    }
+}
+
+impl<T: MallocSizeOf> MallocSizeOf for Range<T> {
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        self.start.size_of(ops) + self.end.size_of(ops)
     }
 }
 
@@ -203,13 +202,21 @@ where
     }
 }
 
-impl<T: MallocSizeOf> MallocSizeOf for [T] {
+impl MallocSizeOf for String {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        let mut n = 0;
-        for elem in self.iter() {
-            n += elem.size_of(ops);
-        }
-        n
+        unsafe { ops.malloc_size_of(self.as_ptr()) }
+    }
+}
+
+impl<T: ?Sized> MallocShallowSizeOf for Box<T> {
+    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        unsafe { ops.malloc_size_of(&**self) }
+    }
+}
+
+impl<T: MallocSizeOf + ?Sized> MallocSizeOf for Box<T> {
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        self.shallow_size_of(ops) + (**self).size_of(ops)
     }
 }
 
@@ -251,6 +258,36 @@ impl<T: MallocSizeOf> MallocSizeOf for VecDeque<T> {
         let mut n = self.shallow_size_of(ops);
         for elem in self.iter() {
             n += elem.size_of(ops);
+        }
+        n
+    }
+}
+
+impl<K, V> MallocShallowSizeOf for BTreeMap<K, V>
+where
+    K: Eq + Hash,
+{
+    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        if ops.has_malloc_enclosing_size_of() {
+            self.values()
+                .next()
+                .map_or(0, |v| unsafe { ops.malloc_enclosing_size_of(v) })
+        } else {
+            self.len() * (size_of::<V>() + size_of::<K>() + size_of::<usize>())
+        }
+    }
+}
+
+impl<K, V> MallocSizeOf for BTreeMap<K, V>
+where
+    K: Eq + Hash + MallocSizeOf,
+    V: MallocSizeOf,
+{
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        let mut n = self.shallow_size_of(ops);
+        for (k, v) in self.iter() {
+            n += k.size_of(ops);
+            n += v.size_of(ops);
         }
         n
     }
@@ -328,50 +365,6 @@ where
     }
 }
 
-impl<K, V> MallocShallowSizeOf for BTreeMap<K, V>
-where
-    K: Eq + Hash,
-{
-    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        if ops.has_malloc_enclosing_size_of() {
-            self.values()
-                .next()
-                .map_or(0, |v| unsafe { ops.malloc_enclosing_size_of(v) })
-        } else {
-            self.len() * (size_of::<V>() + size_of::<K>() + size_of::<usize>())
-        }
-    }
-}
-
-impl<K, V> MallocSizeOf for BTreeMap<K, V>
-where
-    K: Eq + Hash + MallocSizeOf,
-    V: MallocSizeOf,
-{
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        let mut n = self.shallow_size_of(ops);
-        for (k, v) in self.iter() {
-            n += k.size_of(ops);
-            n += v.size_of(ops);
-        }
-        n
-    }
-}
-
-// PhantomData is always 0.
-impl<T> MallocSizeOf for PhantomData<T> {
-    fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
-        0
-    }
-}
-
-// XXX: we don't want MallocSizeOf to be defined for Rc and Arc. If negative
-// trait bounds are ever allowed, this code should be uncommented.
-// (We do have a compile-fail test for this:
-// rc_arc_must_not_derive_malloc_size_of.rs)
-//impl<T> !MallocSizeOf for Arc<T> { }
-//impl<T> !MallocShallowSizeOf for Arc<T> { }
-
 /// If a mutex is stored directly as a member of a data type that is being measured,
 /// it is the unique owner of its contents and deserves to be measured.
 ///
@@ -384,3 +377,9 @@ impl<T: MallocSizeOf> MallocSizeOf for Mutex<T> {
         (*self.lock().unwrap()).size_of(ops)
     }
 }
+
+// XXX: we don't want MallocSizeOf to be defined for Rc and Arc. If negative
+// trait bounds are ever allowed, this code should be uncommented.
+// (We do have a compile-fail test for this: rc_arc_must_not_derive_malloc_size_of.rs)
+//impl<T> !MallocSizeOf for Arc<T> { }
+//impl<T> !MallocShallowSizeOf for Arc<T> { }
