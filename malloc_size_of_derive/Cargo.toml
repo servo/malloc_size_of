@@ -7,7 +7,6 @@ license = "MIT OR Apache-2.0"
 description = "Crate for Firefox memory reporting, not intended for external use"
 
 [lib]
-path = "lib.rs"
 proc-macro = true
 
 [dependencies]
