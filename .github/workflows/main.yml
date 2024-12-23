@@ -25,11 +25,6 @@ jobs:
       - name: Init submodules
         run: git submodule update --init
 
-      - name: Cargo bench
-        run: cargo bench --all
-        env:
-          RUSTFLAGS: --cfg bench
-
       - name: Cargo test
         if: matrix.version != 'nightly'
         run: cargo test --all
