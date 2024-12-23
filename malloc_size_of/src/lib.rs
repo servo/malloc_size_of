@@ -152,6 +152,7 @@ impl MallocSizeOfOps {
 
     /// Call `size_of_op` on `ptr`, first checking that the allocation isn't
     /// empty, because some types (such as `Vec`) utilize empty allocations.
+    #[allow(clippy::missing_safety_doc)]
     pub unsafe fn malloc_size_of<T: ?Sized>(&self, ptr: *const T) -> usize {
         if MallocSizeOfOps::is_empty(ptr) {
             0
@@ -167,6 +168,7 @@ impl MallocSizeOfOps {
 
     /// Call `enclosing_size_of_op`, which must be available, on `ptr`, which
     /// must not be empty.
+    #[allow(clippy::missing_safety_doc)]
     pub unsafe fn malloc_enclosing_size_of<T>(&self, ptr: *const T) -> usize {
         assert!(!MallocSizeOfOps::is_empty(ptr));
         (self.enclosing_size_of_op.unwrap())(ptr as *const c_void)
