@@ -105,6 +105,12 @@ impl<T> MallocSizeOf for PhantomData<T> {
     }
 }
 
+impl<T: MallocSizeOf, const N: usize> MallocSizeOf for [T; N] {
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        self.iter().fold(0, |acc, item| acc + item.size_of(ops))
+    }
+}
+
 impl<T1, T2> MallocSizeOf for (T1, T2)
 where
     T1: MallocSizeOf,
