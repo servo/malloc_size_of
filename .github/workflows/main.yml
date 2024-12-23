@@ -36,6 +36,8 @@ jobs:
   msrv:
     name: MSRV
     runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
     steps:
       - uses: actions/checkout@v4
 
