@@ -84,14 +84,14 @@ malloc_size_of_is_0!(
     NonZeroI128
 );
 
-impl<'a, T: ?Sized> MallocSizeOf for &'a T {
+impl<T: ?Sized> MallocSizeOf for &'_ T {
     fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
         // Zero makes sense for a non-owning reference.
         0
     }
 }
 
-impl<'a, T: ?Sized> MallocSizeOf for &'a mut T {
+impl<T: ?Sized> MallocSizeOf for &'_ mut T {
     fn size_of(&self, _ops: &mut MallocSizeOfOps) -> usize {
         // Zero makes sense for a non-owning reference.
         0
@@ -190,7 +190,7 @@ impl<T: MallocSizeOf> MallocSizeOf for RefCell<T> {
     }
 }
 
-impl<'a, B: ?Sized + ToOwned> MallocSizeOf for Cow<'a, B>
+impl<B: ?Sized + ToOwned> MallocSizeOf for Cow<'_, B>
 where
     B::Owned: MallocSizeOf,
 {
