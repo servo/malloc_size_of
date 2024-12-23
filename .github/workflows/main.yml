@@ -22,9 +22,6 @@ jobs:
           rustup set profile minimal
           rustup override set ${{ matrix.version }}
 
-      - name: Init submodules
-        run: git submodule update --init
-
       - name: Cargo test
         if: matrix.version != 'nightly'
         run: cargo test --all
