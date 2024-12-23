@@ -51,7 +51,6 @@ mod impls;
 
 use alloc::boxed::Box;
 use core::ffi::c_void;
-use core::ops::{Deref, DerefMut};
 
 /// Trait for measuring the "deep" heap usage of a data structure. This is the
 /// most commonly-used of the traits.
@@ -181,24 +180,5 @@ impl MallocSizeOfOps {
             .as_mut()
             .expect("missing have_seen_ptr_op");
         have_seen_ptr_op(ptr as *const c_void)
-    }
-}
-
-/// Measurable that defers to inner value and used to verify MallocSizeOf implementation in a
-/// struct.
-#[derive(Clone)]
-pub struct Measurable<T: MallocSizeOf>(pub T);
-
-impl<T: MallocSizeOf> Deref for Measurable<T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        &self.0
-    }
-}
-
-impl<T: MallocSizeOf> DerefMut for Measurable<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.0
     }
 }
