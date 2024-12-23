@@ -6,7 +6,7 @@ use core::marker::PhantomData;
 use core::mem::size_of;
 use core::num::{NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize};
 use core::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
-use core::ops::Range;
+use core::ops::{Range, RangeFrom, RangeInclusive, RangeTo};
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::{AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize};
 use core::sync::atomic::{AtomicU16, AtomicU32, AtomicU64, AtomicU8, AtomicUsize};
@@ -157,6 +157,21 @@ impl<T: MallocSizeOf> MallocSizeOf for [T] {
 impl<T: MallocSizeOf> MallocSizeOf for Range<T> {
     fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
         self.start.size_of(ops) + self.end.size_of(ops)
+    }
+}
+impl<T: MallocSizeOf> MallocSizeOf for RangeInclusive<T> {
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        self.start().size_of(ops) + self.end().size_of(ops)
+    }
+}
+impl<T: MallocSizeOf> MallocSizeOf for RangeTo<T> {
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        self.end.size_of(ops)
+    }
+}
+impl<T: MallocSizeOf> MallocSizeOf for RangeFrom<T> {
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        self.start.size_of(ops)
     }
 }
 
