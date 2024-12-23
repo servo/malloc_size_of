@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [stable, beta, nightly]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set toolchain
+        run: |
+          rustup set profile minimal
+          rustup override set ${{ matrix.version }}
+
+      - name: Init submodules
+        run: git submodule update --init
+
+      - name: Cargo bench
+        run: cargo bench --all
+        env:
+          RUSTFLAGS: --cfg bench
+
+      - name: Cargo test
+        if: matrix.version != 'nightly'
+        run: cargo test --all
+
+      - name: Cargo doc
+        if: matrix.version == 'nightly'
+        run: cargo doc
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        run: |
+          rustup set profile minimal
+          rustup override set 1.66.0
+
+      - run: cargo check --lib --all-features
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        run: |
+          rustup set profile minimal
+          rustup override set stable
+
+      - name: Install clippy
+        run: |
+          rustup component add clippy
+          rustup component add rustfmt
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-features --all-targets -- -D warnings
+
+  build_result:
+    name: Result
+    runs-on: ubuntu-latest
+    needs:
+      - ci
+      - lint
+      - msrv
+
+    steps:
+      - name: Success
+        if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+        run: exit 0
+      - name: Failure
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
