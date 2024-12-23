@@ -36,16 +36,11 @@ jobs:
   msrv:
     name: MSRV
     runs-on: ubuntu-latest
-    env:
-      CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install stable toolchain
-        run: |
-          rustup set profile minimal
-          rustup override set 1.66.0
-
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.66
       - run: cargo check --lib --all-features
 
   format:
