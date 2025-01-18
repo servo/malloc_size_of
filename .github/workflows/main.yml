@@ -60,6 +60,14 @@ jobs:
       - name: Run clippy
         run: cargo clippy --all-features --all-targets -- -D warnings
 
+  # If this fails, consider changing your text or adding something to .typos.toml.
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check typos
+        uses: crate-ci/typos@v1.29.4
+
   build_result:
     name: Result
     runs-on: ubuntu-latest
@@ -68,6 +76,7 @@ jobs:
       - format
       - clippy
       - msrv
+      - typos
 
     steps:
       - name: Success
