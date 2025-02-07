@@ -1,6 +1,6 @@
 # MallocSizeOf
 
-[![Build Status](https://github.com/servo/malloc_size_of/actions/workflows/ci.yml/badge.svg)](https://github.com/servo/malloc_size_of/actions)
+[![Build Status](https://github.com/servo/malloc_size_of/actions/workflows/main.yml/badge.svg)](https://github.com/servo/malloc_size_of/actions)
 [![Crates.io](https://img.shields.io/crates/v/malloc_size_of.svg)](https://crates.io/crates/malloc_size_of)
 [![Docs](https://docs.rs/malloc_size_of/badge.svg)](https://docs.rs/malloc_size_of)
 ![Crates.io License](https://img.shields.io/crates/l/malloc_size_of)
