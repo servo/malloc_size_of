@@ -1,5 +1,6 @@
 [package]
 name = "malloc_size_of"
+description = "A an allocator-agnostic crate for measuring the heap size of a value"
 version = "0.1.0-alpha.1"
 authors = ["The Servo Project Developers"]
 license = "MIT OR Apache-2.0"
