@@ -1,11 +1,10 @@
 [package]
 name = "malloc_size_of"
-version = "0.0.1"
+version = "0.1.0-alpha.1"
 authors = ["The Servo Project Developers"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/servo/malloc_size_of"
 edition = "2021"
-publish = false
 
 [features]
 default = ["std"]
