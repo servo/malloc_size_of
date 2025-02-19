@@ -6,11 +6,11 @@ authors = ["The Servo Project Developers"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/servo/malloc_size_of"
 edition = "2021"
+rust-version = "1.56"
 
 [features]
 default = ["std"]
 std = []
-void = ["dep:void"]
 
 [dependencies]
 void = { version = "1.0.2", optional = true }
