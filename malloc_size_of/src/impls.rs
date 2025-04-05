@@ -23,7 +23,7 @@ use core::sync::atomic::{AtomicU16, AtomicU32, AtomicU64, AtomicU8, AtomicUsize}
 
 use alloc::borrow::{Cow, ToOwned};
 use alloc::boxed::Box;
-use alloc::collections::{BTreeMap, VecDeque};
+use alloc::collections::{BTreeMap, BTreeSet, VecDeque};
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -312,6 +312,34 @@ where
         let mut n = self.shallow_size_of(ops);
         for (k, v) in self.iter() {
             n += k.size_of(ops);
+            n += v.size_of(ops);
+        }
+        n
+    }
+}
+
+impl<T> MallocShallowSizeOf for BTreeSet<T>
+where
+    T: Ord,
+{
+    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        if ops.has_malloc_enclosing_size_of() {
+            self.iter()
+                .next()
+                .map_or(0, |v| unsafe { ops.malloc_enclosing_size_of(v) })
+        } else {
+            self.len() * (size_of::<T>() + size_of::<usize>())
+        }
+    }
+}
+
+impl<T> MallocSizeOf for BTreeSet<T>
+where
+    T: Ord + MallocSizeOf,
+{
+    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
+        let mut n = self.shallow_size_of(ops);
+        for v in self.iter() {
             n += v.size_of(ops);
         }
         n
