@@ -18,8 +18,10 @@ use core::num::{NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZ
 use core::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
 use core::ops::{Range, RangeFrom, RangeInclusive, RangeTo};
 use core::sync::atomic::AtomicBool;
-use core::sync::atomic::{AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize};
-use core::sync::atomic::{AtomicU16, AtomicU32, AtomicU64, AtomicU8, AtomicUsize};
+use core::sync::atomic::{AtomicI16, AtomicI32, AtomicI8, AtomicIsize};
+#[cfg(target_has_atomic = "64")]
+use core::sync::atomic::{AtomicI64, AtomicU64};
+use core::sync::atomic::{AtomicU16, AtomicU32, AtomicU8, AtomicUsize};
 
 use alloc::borrow::{Cow, ToOwned};
 use alloc::boxed::Box;
@@ -75,8 +77,11 @@ malloc_size_of_is_0!(i8, i16, i32, i64, i128, isize);
 malloc_size_of_is_0!(f32, f64);
 
 malloc_size_of_is_0!(AtomicBool);
-malloc_size_of_is_0!(AtomicU8, AtomicU16, AtomicU32, AtomicU64, AtomicUsize);
-malloc_size_of_is_0!(AtomicI8, AtomicI16, AtomicI32, AtomicI64, AtomicIsize);
+malloc_size_of_is_0!(AtomicU8, AtomicU16, AtomicU32, AtomicUsize);
+malloc_size_of_is_0!(AtomicI8, AtomicI16, AtomicI32, AtomicIsize);
+#[cfg(target_has_atomic = "64")]
+malloc_size_of_is_0!(AtomicU64, AtomicI64);
+
 malloc_size_of_is_0!(
     NonZeroU8,
     NonZeroU16,
